@@ -6,6 +6,10 @@ Use .env.sample to create .env file and replace values accordingly
 
 npm run dev
 
+#DB Setup
+Log into MySQL
+
+Run command: CREATE DATABASE <dbName>;
 
 #Testing
 
