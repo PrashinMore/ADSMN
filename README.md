@@ -1,5 +1,7 @@
 #Setup
 
+git clone https://github.com/PrashinMore/ADSMN.git
+
 npm install
 
 Use .env.sample to create .env file and replace values accordingly
