@@ -1,6 +1,7 @@
 const moment = require('moment');
 const { User } = require('../models');
 const { encryptUserId } = require('../utils/encryption');
+const redisClient = require('../config/redisClient'); // path to your Redis client
 
 exports.sendOTP = async (req, res, next) => {
   try {
@@ -13,27 +14,29 @@ exports.sendOTP = async (req, res, next) => {
       });
     }
 
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(mobile)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number. Must be 10 digits.'
+      });
+    }
+
     const otp = '1234';
-    const otpExpiry = moment().add(1, 'minute').toDate();
+    const otpExpirySeconds = 60;
 
     let user = await User.findOne({ where: { phone: mobile } });
 
-    if (user) {
-      await user.update({
-        otp,
-        otpExpiry
-      });
-    } else {
-      user = await User.build({
+    if (!user) {
+      user = await User.create({
         phone: mobile,
-        otp,
-        otpExpiry,
         name: '',
         email: '',
         dob: new Date()
       });
-      await user.save();
     }
+
+    await redisClient.setEx(`otp:${mobile}`, otpExpirySeconds, otp);
 
     return res.status(200).json({
       success: true,
@@ -55,7 +58,6 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // Validate phone number (basic 10 digits)
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(phone)) {
       return res.status(400).json({
@@ -64,7 +66,6 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
@@ -73,7 +74,6 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // Validate Date of Birth (DOB)
     const dobDate = moment(dob, 'YYYY-MM-DD', true);
     if (!dobDate.isValid()) {
       return res.status(400).json({
@@ -98,17 +98,19 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    if (user.otp !== otp) {
+    const storedOtp = await redisClient.get(`otp:${phone}`);
+
+    if (!storedOtp) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid OTP'
+        message: 'OTP expired or not found. Please request a new OTP.'
       });
     }
 
-    if (moment().isAfter(user.otpExpiry)) {
+    if (storedOtp !== otp) {
       return res.status(400).json({
         success: false,
-        message: 'OTP expired. Please request a new OTP.'
+        message: 'Invalid OTP'
       });
     }
 
@@ -124,10 +126,10 @@ exports.register = async (req, res, next) => {
     await user.update({
       name,
       dob: dobDate.toDate(),
-      email,
-      otp: null,
-      otpExpiry: null
+      email
     });
+
+    await redisClient.del(`otp:${phone}`); // Cleanup after use
 
     const encryptedUserId = encryptUserId(user.id);
 

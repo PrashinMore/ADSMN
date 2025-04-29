@@ -4,6 +4,7 @@ const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const scoreRoutes = require('./routes/scoreRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const {authenticateUser} = require('./middlewares/auth');
 
 const app = express();
 
@@ -13,8 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
-app.use('/api/score', scoreRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/score', authenticateUser, scoreRoutes);
+app.use('/api/dashboard', authenticateUser, dashboardRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Game Score API is running' });

@@ -22,10 +22,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATEONLY,
       allowNull: false
     },
-    otp: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
     otpExpiry: {
       type: DataTypes.DATE,
       allowNull: true

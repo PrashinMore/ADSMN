@@ -29,32 +29,7 @@ const getCurrentWeekDates = () => {
 
 exports.saveScore = async (req, res, next) => {
   try {
-    const { userId, score } = req.body;
-
-    if (!userId || !score) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID and score are required'
-      });
-    }
-
-    let decryptedUserId;
-    try {
-      decryptedUserId = decryptUserId(userId);
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid user ID'
-      });
-    }
-
-    const user = await User.findByPk(decryptedUserId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    const { score } = req.body;
 
     if (score < 50 || score > 500) {
       return res.status(400).json({
@@ -68,7 +43,7 @@ exports.saveScore = async (req, res, next) => {
     
     const scoresSubmittedToday = await Score.count({
       where: {
-        userId: decryptedUserId,
+        userId: req.user.id,
         createdAt: {
           [Op.between]: [today.toDate(), tomorrow.toDate()]
         }
@@ -85,7 +60,7 @@ exports.saveScore = async (req, res, next) => {
     const currentWeek = getWeekNumber(new Date());
 
     await Score.create({
-      userId: decryptedUserId,
+      userId: req.user.id,
       score,
       week: currentWeek,
       createdAt: new Date()
@@ -103,58 +78,30 @@ exports.saveScore = async (req, res, next) => {
 
 exports.getScoreCard = async (req, res, next) => {
   try {
-    const { userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-
-    let decryptedUserId;
-    try {
-      decryptedUserId = decryptUserId(userId);
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid user ID'
-      });
-    }
-
-    const user = await User.findByPk(decryptedUserId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
     const totalScore = await Score.sum('score', {
-      where: { userId: decryptedUserId }
+      where: { userId: req.user.id }
     }) || 0;
 
     const userRankData = await sequelize.query(`
-        SELECT 
-          u.id, 
-          u.name, 
-          SUM(s.score) as total_score,
-          RANK() OVER (ORDER BY SUM(s.score) DESC) as user_rank
-        FROM Users u
-        LEFT JOIN Scores s ON u.id = s.userId
-        GROUP BY u.id, u.name
-        ORDER BY total_score DESC
+      SELECT 
+        s.userId as id,
+        u.name, 
+        SUM(s.score) as total_score,
+        RANK() OVER (ORDER BY SUM(s.score) DESC) as user_rank
+      FROM Scores s
+      JOIN Users u ON s.userId = u.id
+      GROUP BY s.userId, u.name
       `, { type: sequelize.QueryTypes.SELECT });
       
-      const userRankInfo = userRankData.find(u => u.id === decryptedUserId);
+      const userRankInfo = userRankData.find(u => u.id === req.user.id);
       const currentRank = userRankInfo ? userRankInfo.user_rank : '-';
       
 
     const scoreCardData = {
-      userName: user.name,
+      userName: req.user.name,
       rank: currentRank,
       totalScore,
-      userId: decryptedUserId
+      userId: req.user.id
     };
 
     const imageResult = await imageGenerator.generateScoreCard(scoreCardData);

@@ -5,40 +5,12 @@ const { decryptUserId } = require('../utils/encryption');
 
 exports.getWeeklyScores = async (req, res, next) => {
   try {
-    const { userId } = req.body || {};
-
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-
-    let decryptedUserId;
-    try {
-      decryptedUserId = decryptUserId(userId);
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid user ID'
-      });
-    }
-
-    const user = await User.findByPk(decryptedUserId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
     const userWeeklyScores = await Score.findAll({
       attributes: [
         'week',
         [sequelize.fn('SUM', sequelize.col('score')), 'totalScore']
       ],
-      where: { userId: decryptedUserId },
+      where: { userId: req.user.id },
       group: ['week'],
       order: [['week', 'ASC']]
     });
@@ -55,19 +27,23 @@ for (const weekData of userWeeklyScores) {
     FROM Scores
     WHERE week = :week
     GROUP BY userId
+
   `, { 
     replacements: { week },
     type: sequelize.QueryTypes.SELECT 
   });
 
-  const userRank = rankings.find(r => r.userId === decryptedUserId);
+  const userRank = rankings.find(r => r.userId === req.user.id);
   const rank = userRank ? userRank.user_rank : null;
   
-  weeklyRanks.push({
-    weekNo: week,
-    rank: rank || '-',
-    totalScore: weekData.dataValues.totalScore || 0
-  });
+  if (weekData.dataValues.totalScore > 0) {
+    weeklyRanks.push({
+      weekNo: week,
+      rank: rank || '-',
+      totalScore: weekData.dataValues.totalScore
+    });
+  }
+  
 }
 
     return res.status(200).json({

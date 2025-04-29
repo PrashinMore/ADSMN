@@ -31,30 +31,30 @@ exports.generateScoreCard = async (data) => {
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(leftWidth, 0, rightWidth, 720);
 
-  ctx.font = 'bold 96px "Poppins", sans-serif';
+  ctx.font = 'bold 150px "Poppins Bold", sans-serif';
   ctx.fillStyle = '#FFFFFF';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(`${rank}`, leftWidth / 2, 360);
 
-  ctx.font = 'bold 48px "Poppins", sans-serif';
+  ctx.font = 'bold 60px "Poppins Bold", sans-serif';
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText('Score Card', leftWidth + rightWidth / 2, 100);
 
-  ctx.font = 'bold 36px "Poppins", sans-serif';
-  ctx.fillStyle = '#007BFF';
-  ctx.fillText(`${userName}`, leftWidth + rightWidth / 2, 200);
+  ctx.font = 'bold 50px "Poppins", sans-serif';
+  ctx.fillStyle = '#335BFD';
+  ctx.fillText(`${userName}`, leftWidth + rightWidth / 2, 300);
 
   ctx.font = '36px "Poppins", sans-serif';
   ctx.fillStyle = '#000000';
-  ctx.fillText(`Score: ${totalScore}`, leftWidth + rightWidth / 2, 300);
+  ctx.fillText(`Score: ${totalScore}`, leftWidth + rightWidth / 2, 500);
 
   const currentDate = moment().format('Do MMMM YY');
   ctx.font = '24px "Poppins", sans-serif';
   ctx.fillStyle = '#000000';
-  ctx.fillText(`Date: ${currentDate}`, leftWidth + rightWidth / 2, 370);
+  ctx.fillText(`Date: ${currentDate}`, leftWidth + rightWidth / 2, 560);
 
   const imageName = `score_card_${userId}_${Date.now()}.jpeg`;
   const imagePath = path.join(uploadDir, imageName);

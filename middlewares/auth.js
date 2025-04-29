@@ -3,7 +3,7 @@ const { User } = require('../models');
 
 exports.authenticateUser = async (req, res, next) => {
   try {
-    const { userId } = req.body;
+    const userId = req.body?.userId;
     
     if (!userId) {
       return res.status(401).json({
@@ -26,6 +26,8 @@ exports.authenticateUser = async (req, res, next) => {
       req.user = user;
       next();
     } catch (error) {
+      console.log("File: middleware/auth.js, Func: authenticateUser. Error: ", error);
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid user ID'
