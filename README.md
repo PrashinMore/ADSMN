@@ -4,6 +4,8 @@ git clone https://github.com/PrashinMore/ADSMN.git
 
 npm install
 
+make sure redis is installed and running
+
 Use .env.sample to create .env file and replace values accordingly
 
 npm run dev
