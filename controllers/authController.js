@@ -1,7 +1,7 @@
 const moment = require('moment');
 const { User } = require('../models');
 const { encryptUserId } = require('../utils/encryption');
-const redisClient = require('../config/redisClient'); // path to your Redis client
+const redisClient = require('../config/redisClient');
 
 exports.sendOTP = async (req, res, next) => {
   try {
@@ -25,17 +25,6 @@ exports.sendOTP = async (req, res, next) => {
     const otp = '1234';
     const otpExpirySeconds = 60;
 
-    let user = await User.findOne({ where: { phone: mobile } });
-
-    if (!user) {
-      user = await User.create({
-        phone: mobile,
-        name: '',
-        email: '',
-        dob: new Date()
-      });
-    }
-
     await redisClient.setEx(`otp:${mobile}`, otpExpirySeconds, otp);
 
     return res.status(200).json({
@@ -46,6 +35,7 @@ exports.sendOTP = async (req, res, next) => {
     next(error);
   }
 };
+
 
 exports.register = async (req, res, next) => {
   try {
@@ -89,15 +79,6 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ where: { phone } });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found. Please send OTP first.'
-      });
-    }
-
     const storedOtp = await redisClient.get(`otp:${phone}`);
 
     if (!storedOtp) {
@@ -114,22 +95,31 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    const isNewRegistration = !user.name;
+    let user = await User.findOne({ where: { phone } });
 
-    if (!isNewRegistration) {
+    if (user && user.name) {
       return res.status(400).json({
         success: false,
         message: 'Phone number already registered'
       });
     }
 
-    await user.update({
-      name,
-      dob: dobDate.toDate(),
-      email
-    });
+    if (!user) {
+      user = await User.create({
+        phone,
+        name,
+        dob: dobDate.toDate(),
+        email
+      });
+    } else {
+      await user.update({
+        name,
+        dob: dobDate.toDate(),
+        email
+      });
+    }
 
-    await redisClient.del(`otp:${phone}`); // Cleanup after use
+    await redisClient.del(`otp:${phone}`);
 
     const encryptedUserId = encryptUserId(user.id);
 
